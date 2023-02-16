@@ -1,0 +1,1 @@
+{"result": "true", "next": "virre", "player": "virre", "players": [{"name": "virre", "sticks": 3, "bid": 2, "points": 0, "winner": false}, {"name": "pirlo", "sticks": 3, "bid": 2, "points": 0, "winner": false}, {"name": "jerka", "sticks": 2, "bid": 2, "points": 20, "winner": false}], "cardsleft": "no", "firstcard": "true"}

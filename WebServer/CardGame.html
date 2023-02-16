@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Gard Game</title>
+</head>
+<!-- <body onload = "AutoRefresh(120000);"> -->
+<body>
+<h1>PLUMP!</h1>
+<p>Playing the famous card game: PLUMP.</p>
+
+<label for="fname">players name:</label><br>
+<input type="text" id="fname" name="fname" value="jerka"><br>
+<!-- <button type="button" onclick="window.location.href='http://localhost:8080/?name=' + fname.value + '&func=addplayer';" target="_blank">TEST Add</button><br> -->
+<button type="button" onclick="AddUser(fname.value)">Add Player</button>  <button type="button" onclick="AddVirtualUser(fname.value)">Add Virtual Player</button><br>
+<div class="container" id="add-player-container"></div>
+<div class="container" id="players-container"></div>
+
+<script>
+    let nIntervId;
+
+    function updateAllEvents(){
+      CheckActualPlayer(fname.value);
+    }
+
+    function CheckActualPlayer(name){
+      var url = new URL("http://localhost:8080");    
+      var params = [["func","checkplayer"], ["name", fname], ["format","json"]];
+      url.search = new URLSearchParams(params).toString();
+      fetch(url).then((response) => {
+       // for each response header, log an array with header name as key
+       console.log(...response.headers);
+       response.json().then((myJson) => {
+         CheckPlayer(myJson);
+        });
+      });
+    }
+
+    function CheckPlayer(data){
+      let name = data.name;
+      let valid = data.valid == "true";
+      if (valid){
+        RefreshActualInfo();
+      }
+    }
+
+    function AutoRefresh(t){
+      setTimeout("location.reload(true);", t);       
+      RefreshActualInfo();
+    }
+
+    function RefreshActualInfo(){
+      displayPlayers();
+      GetActualGameInfo();
+    }
+
+    function AddUser(fname){
+      AddUserToGame(fname, false)
+    }
+
+    function AddVirtualUser(fname){
+      AddUserToGame(fname, true)
+    }
+    
+    function AddUserToGame(name, virtual)
+    {
+      var url = new URL("http://localhost:8080");
+      let szVirtual = "false";
+      if (virtual) {
+        szVirtual = "true";
+      }
+      var params = [["func","addplayer"], ["name", name], ["virtual",szVirtual], ["format","json"]];
+      url.search = new URLSearchParams(params).toString();
+      fetch(url).then((response) => {
+        // for each response header, log an array with header name as key
+        console.log(...response.headers);
+        response.json().then((myJson) => {
+          showPlayerInfo(myJson);
+          renderUsers();
+        });
+      });
+    }
+
+    // function AddUser(fname){
+    //   var url = new URL("http://localhost:8080");
+    //   var params = [["func","addplayer"], ["name", fname], ["format","json"]];
+    //   url.search = new URLSearchParams(params).toString();
+    //   fetch(url).then((response) => {
+    //    // for each response header, log an array with header name as key
+    //    console.log(...response.headers);
+    //    response.json().then((myJson) => {
+    //      showPlayerInfo(myJson);
+    //     });
+    //   });
+    // }
+
+    function showPlayerInfo(data){
+      let addCardPlayer = document.getElementById("add-player-container");      
+      //let div = document.createElement("div");
+      //div.className = "players";
+
+      let res = (data.result.toLowerCase() === 'true');
+      szValue = "";
+      if ( res == true){
+        szValue = "<p>" + data.name + " (" + data.pos + ") added to the game</p>";
+        if (!nIntervId) {
+          //build
+          //nIntervId = setInterval(GetCardPlayerName, 2000);
+          //debug
+          //nIntervId = setInterval(GetCardPlayerName, 12000);
+          nIntervId = setInterval(GetCardPlayerName, 30000);
+        }
+      }
+      else{
+        szValue = "<p>" + data.name + " already in the game</p>";
+      }
+      addCardPlayer.innerHTML = szValue;
+      //addCardPlayer.appendChild(div);
+    }
+
+    function displayPlayers() {
+      var url = new URL("http://localhost:8080");    
+      var params = [["func","getplayers"], ["format","json"]];
+      url.search = new URLSearchParams(params).toString();
+
+      fetch(url).then((response) => {
+       // for each response header, log an array with header name as key
+       console.log(...response.headers);
+       response.json().then((myJson) => {
+         //const objectURL = URL.createObjectURL(myBlob);        
+         showPlayers(myJson.players);
+         //myImage.innerHTML = "<p>" + myJson + "</p>";
+        });
+      });
+    }
+
+    function previewPlayersFile(input) {
+      var data = readPlayersfile(input);
+      return data;
+    }
+
+    function readPlayersfile(input){      
+      //var file = "readme.txt";
+      const content = document.querySelector('.content');
+      const [file] = input.files; // document.querySelector('input[type=file]').files;
+      const reader = new FileReader();
+      reader.addEventListener("load", () => {
+          // this will then display a text file
+          var ptext = reader.result;
+          showPlayers(ptext.players);
+          //content.innerText = ptext; //reader.result;          
+        } , false);
+
+      if (file) {
+        try {
+          reader.readAsText(file);
+        }catch (error) {
+          var szMsg = error;
+        } 
+      }
+      return ptext;  
+    }
+
+    function previewCardsFile(input){
+      var data = readCardsfile(input);
+      return data;
+    }
+
+    function readCardsfile(input){      
+      //var file = "readme.txt";
+      const contentCards = document.querySelector('.content');
+      const [file] = input.files;
+      //const [file] = document.querySelector('input[type=file]').files;
+      //var fileToRead = document.getElementById("cards");
+
+      const readerCards = new FileReader();
+      readerCards.addEventListener("load", () => {
+          // this will then display a text file
+          var atext = readerCards.result;
+          showPlayersCard(atext);
+          //content.innerText = ptext; //reader.result;          
+        } , false);
+
+      if (file) {
+        try {
+          readerCards.readAsText(file);
+        }catch (error) {
+          var szMsg = error;
+        } 
+      }
+      return atext;  
+    }
+
+    function showPlayersCard(ptext){
+      //cards-container
+      CleanUpCardsContaier();
+      let cardPlayer = document.getElementById("cards-container");
+      let select = document.createElement("select");
+      //myDiv.className = "cardPlayer"
+      //cardPlayer.appendChild(myDiv);
+      select.name = "select-cards";
+      select.id = "select-cards"
+
+      //myDiv.innerHTML = "<p>" + "Player:" + ptext.player+ "</p>";
+      var i = 0
+      for (const x of ptext.cards) {
+        i = i + 1;
+        showCard(select, x, i);
+      };
+      if (i < 10){
+        for (let n = i + 1; n <=10 ; n++) {
+          let img_name =  "Images/" + "blank.jpg"
+          document.getElementById("Card" + n.toString()).src = img_name;
+        }
+      }
+      
+      var label = document.createElement("label");
+      label.id = "label-cards";
+      label.innerHTML = "Choose your card " + ptext.player + ": "
+      //label.htmlFor = "labelcards";
+      cardPlayer.appendChild(label).appendChild(select);
+      //select.setAttribute("onChange", PlayCard());
+    }
+
+    function CleanUpCardsContaier(){
+      let cardPlayer = document.getElementById("cards-container");
+      if (cardPlayer != null){
+        let label = document.getElementById("label-cards");
+        if (label != null){
+          let select = document.getElementById("select-cards");
+          if (select != null){
+            let options = document.getElementsByClassName("optionCards");
+            for (let i = options.length; i > 0 ; i--) {
+              let option = document.getElementById("optionCard_id_" + i.toString());
+              option.remove();
+            }
+            select.remove();
+          }
+          label.remove();
+        }
+      }
+    }
+
+    function showCard(select, cardData, i){
+      //let cardPlayer = document.getElementById("cards-container");
+      //let div = document.createElement("div");
+      let option = document.createElement("option");
+      var val = cardData.suit + " (" + cardData.rank + ")";
+      var img_name =  "Images/" + cardData.suit.toLowerCase() + "_" + cardData.rank.toLowerCase() + ".jpg";
+      option.className = "optionCards";
+      option.id = "optionCard_id_" + i.toString();
+      option.value = val;
+      option.text = val;
+      select.appendChild(option);
+
+      if (i <= 10) {
+        document.getElementById("Card" + i.toString()).src = img_name;
+      }
+
+      //div.className = "cards";
+      //div.innerHTML = "<p>" + i.toString() + ": " + cardData.suit + " (" + cardData.rank + ")</p>";
+      //cardPlayer.appendChild(div);
+    }
+
+    //async 
+    function renderUsers() {
+        displayPlayers();
+    }
+
+    function cleanupShowPlayersChild() {
+      selecttags = document.getElementsByClassName("selecttag_showplayers");
+      for(let i = selecttags.length; i > 0 ; i--){
+        let selecttag = document.getElementById("selecttag_showplayer_" + i.toString());
+        selecttag.remove();
+      }
+      lbls = document.getElementsByClassName("label_showplayers");
+      for(let i = lbls.length; i > 0 ; i--){
+        let lbl = document.getElementById("label_showplayer_" + i.toString());
+        lbl.remove();
+      }
+    }
+
+    function showPlayers(players) {
+      cleanupShowPlayersChild();
+      let playersCont = document.getElementById("players-container");
+      var i = 0
+      var frag = document.createDocumentFragment();
+      frag.id = "frag-players-container";      
+      for (const p of players) {
+        i = i + 1;
+        showPlayer(frag, p, i);
+      };
+      playersCont.appendChild(frag);
+    }  
+
+    function showPlayer(frag, player, i){
+      if (player.virtual === "false"){
+        fname.value = player.name;
+      }
+      var selecttag=document.createElement("input");
+      selecttag.className = "selecttag_showplayers";
+      let selecttagid = "selecttag_showplayer_" + i.toString();
+      selecttag.setAttribute("type", "radio");
+      selecttag.setAttribute("name", "playersradio" );
+      selecttag.setAttribute("value", player.name );
+      selecttag.setAttribute("id", selecttagid);
+
+      var lbl = document.createElement("label");
+      lbl.className = "label_showplayers";
+      lbl.id = "label_showplayer_" + i.toString();
+      lbl.innerHTML = player.name;
+      
+      lbl.appendChild(selecttag);
+      //frag.appendChild(selecttag);
+      frag.appendChild(lbl);
+    }
+    
+    function SetShowPlayerOption(name){
+      let selecttags = document.getElementsByClassName("selecttag_showplayers")
+      for(let i = 1; i<= selecttags.length; i++){
+        let selecttag = document.getElementById( "selecttag_showplayer_" + i.toString());
+        selecttag.checked = selecttag.value == name;
+      }
+    }
+
+    function bidSticks(value){
+      let name = fname.value; 
+      setBidSticks(name, value, "false");
+    }
+
+    function setBidSticks(fname, value, virtual)  {
+      var url = new URL("http://localhost:8080");   
+      var params = [["func","bidsticks"], ["name", fname], ["value", value], ["virtual", virtual], ["format","json"]];
+      url.search = new URLSearchParams(params).toString();
+      fetch(url).then((response) => {
+       // for each response header, log an array with header name as key
+       console.log(...response.headers);
+       response.json().then((myJson) => {
+         handleBid(myJson);
+        });
+      });
+    }
+
+    function presBidSticks(pdata){
+      let cardPlayed = document.getElementById("my-played-card");
+      let name = pdata.player;
+      let bid = pdata.bid;
+      let myPlayedCardDiv = document.createElement("div");
+      myPlayedCardDiv.className = "played-card-div";
+      myPlayedCardDiv.innerHTML = "<p>" + name + " bid " + bid.toString() + "</p>";
+      cardPlayed.appendChild(myPlayedCardDiv);
+    }
+
+    function handleBid(pdata){
+      let result = pdata.result === "true";
+      if (result){
+        presBidSticks(pdata);
+        let next = pdata.next;
+        if (next.length > 0) {
+          virtual = pdata.virtual === "true";
+          if (virtual){
+            setBidSticks(next, "0", "true");
+          }
+          else{
+            let tmpSuitDiv = document.getElementById("played-suit");
+            tmpSuitDiv.innerHTML = "<p>Set bid for: " + pdata.next + "</p>";
+          }
+        } 
+        let playcard = pdata.playcard === "true"
+        if (playcard){
+          //START
+          removePlayedCards();
+          var stname = handleActualPlayer(pdata.nextplaycard, "play");
+          SetShowPlayerOption(stname);
+        }
+
+      }
+    }
+
+    function getCards(){
+      var name = document.getElementById("fname").value;
+      // if (name.length <= 0) {
+      //   name = displayRadioValue();
+      // }
+      getCardsFor(name);
+    }
+
+    function displayRadioValue() {
+      var ele = document.getElementsByName("playersradio");
+      var retV = "";  
+      for(i = 0; i < ele.length; i++) {
+        if(ele[i].checked){
+          retV = ele[i].value;
+        }
+      }
+      return retV;
+    }
+
+    function getCardsFor(name){
+      let url = "http://localhost:8080?func=getcards&format=json&name=" + name;
+
+      fetch(url).then((response) => {
+       // for each response header, log an array with header name as key
+       console.log(...response.headers);
+       response.json().then((myJson) => {
+         showPlayersCard(myJson);
+        });
+      });
+    }
+
+    function GetSlectedNameFromShowPlayers(){
+      let name = "";
+      let selecttags = document.getElementsByClassName("selecttag_showplayers")
+      for(let i = 1; i<= selecttags.length; i++){
+        let selecttag = document.getElementById( "selecttag_showplayer_" + i.toString());
+        if (selecttag.checked) {
+          name = selecttag.value;
+          break;
+        }
+      }
+      return name;
+    }
+
+    function PlayCardVirtual(){
+      let name = GetSlectedNameFromShowPlayers();
+      let url = new URL("http://localhost:8080");
+      let params = [["func","playvirtual"], ["name",name], ["format","json"]];
+      url.search = new URLSearchParams(params).toString();
+
+      fetch(url).then((response) => {
+        // for each response header, log an array with header name as key
+        console.log(...response.headers);
+        response.json().then((myJson) => {
+          ViewPlayedCard(myJson)
+        });
+      });
+
+    }
+
+    function GetCardFrom(value){
+      let tmpcard = value.substring(value.lastIndexOf('/')+1);
+      tmpcard = tmpcard.substring(0,tmpcard.indexOf("."));
+      let ipos = tmpcard.indexOf("_");
+      let suit = tmpcard.substring(0,ipos);
+      let rank = tmpcard.slice(ipos+1);
+      let card = suit + " (" + rank +")";
+
+      return card;
+    }
+
+    function cardclick(value){
+      let name = document.getElementById("fname").value;
+      let card = GetCardFrom(value.src);
+      PlayerPlayCard(name, card);
+    }
+
+    function PlayCard(){
+      var name = document.getElementById("fname").value;
+      var card = GetSelectedCard();
+      PlayerPlayCard(name, card);
+    }
+
+    function GetSelectedCard(){
+      let select = document.getElementById("select-cards");
+      let value = select.value;
+      let card = select.options[select.selectedIndex].text;
+      return card;
+    }
+
+    function PlayerPlayCard(name, cardNr){
+      let suit = getSuit(cardNr);
+      let rank = getRank(cardNr);
+      let url = new URL("http://localhost:8080");    
+      let params = [["func","playcard"], ["name",name], ["suit",suit], ["rank",rank], ["format","json"]];
+      url.search = new URLSearchParams(params).toString();
+
+      fetch(url).then((response) => {
+        // for each response header, log an array with header name as key
+        console.log(...response.headers);
+        response.json().then((myJson) => {
+          ViewPlayedCard(myJson)
+        });
+      });
+    }
+
+    function getSuit(cardNr) {
+      let szCardNr = cardNr.toString();
+      let p1 =  szCardNr.indexOf("(");
+      let p2 =  szCardNr.indexOf(")");
+      let suit = szCardNr.slice(0,p1).trim();
+      let rank = szCardNr.slice(p1+1, p2).trim();
+      return suit;
+    }
+    function getRank(cardNr) {
+      let szCardNr = cardNr.toString();
+      let p1 =  szCardNr.indexOf("(");
+      let p2 =  szCardNr.indexOf(")");
+      let suit = szCardNr.slice(0,p1).trim();
+      let rank = szCardNr.slice(p1+1, p2).trim();
+      return rank;
+    }
+
+    function ViewPlayedCard(pdata){
+      var name = pdata.player;
+      var cardNr = pdata.card;
+      var firstcard = pdata.firstcard.toLowerCase() === "true";
+      var roundfinish = pdata.roundfinish.toLowerCase() === "true";
+      var nextPlayer = pdata.next;      
+
+      var res = pdata.result.toLowerCase() === "true";
+      let cardPlayed = document.getElementById("my-played-card");      
+      if (res == true){
+        //Image
+        //let divMasters = document.getElementsByClassName("master-played-card-div");
+        //let lLength = divMasters.length;
+        //let first =  lLength <= 0;
+        //let wWidth = 100;
+        // if (!first){
+        //   wWidth = (100/lLength).toFixed(0);
+        // }
+        //let masterPlayedCardDiv = document.createElement("div");
+        //masterPlayedCardDiv.className = "master-played-card-div";
+
+        //let myMasterDivstyle = "";
+        //if (first) {
+        //  myMasterDivstyle = "width: " + wWidth.toString() + "px;"
+        //  masterPlayedCardDiv.float = "left;" 
+        //  masterPlayedCardDiv.background = "green;";
+        //}
+        //else {
+        //  let wToLeft = wWidth * lLength;
+        //  myMasterDivstyle ="margin-left: " + wToLeft.toString() + "px;"
+        //  masterPlayedCardDiv.background = "blue;";
+        //}
+        //masterPlayedCardDiv.style = myMasterDivstyle;
+        //masterPlayedCardDiv.height = "100px;"
+
+
+        //let img = document.createElement("img");
+        //img.className = "played-card-img";
+        //img.setAttribute("width", "67");
+        //img.setAttribute("height", "84");
+        let suit = getSuit(cardNr);
+        let rank = getRank(cardNr);
+        //img.src = "Images/" + suit  + "_" + rank + ".jpg";
+        //masterPlayedCardDiv.appendChild(img);
+
+        if (firstcard) {
+          removePlayedCards();
+        }
+        //name
+        let myPlayedCardDiv = document.createElement("div");
+        myPlayedCardDiv.className = "played-card-div";
+        myPlayedCardDiv.innerHTML = "<p>" + name + " played " + cardNr + "</p>";
+        //masterPlayedCardDiv.appendChild(myPlayedCardDiv);
+        //cardPlayed.appendChild(masterPlayedCardDiv);
+        cardPlayed.appendChild(myPlayedCardDiv);
+        let i = document.getElementsByClassName("played-card-div").length;
+
+        document.getElementById("PlayedCard" + i.toString()).src = "Images/" + suit  + "_" + rank + ".jpg";
+
+        let tmpSuitDiv = document.getElementById("played-suit");
+        tmpSuitDiv.innerHTML = "<p>Actual suit: " + pdata.playingsuit + "</p>";
+        if (roundfinish == false){
+          var nextName = handleActualPlayer(nextPlayer, "play");
+          //getCardsFor(nextName);
+          //myText = document.getElementById("fname");
+          //myText.value = nextPlayer;
+          SetShowPlayerOption(nextName);
+        }        
+        else {
+          let winner = pdata.winner;
+          winnerlabel = document.getElementById("the-winner-is");
+          winnerlabel.innerHTML = "<p>The winner is: " + winner + "</p>";
+          let newDeal = pdata.cardsleft == "no";
+          PrepareForNextRound(newDeal);
+        }  
+        if (!nIntervId){
+          nIntervId = setInterval(GetCardPlayerName, 12000);
+        }
+      }
+      else{
+        cardPlayed.innerHTML = "<p>" + name + " cannot play " + cardNr + "</p>";
+      }
+    }
+
+    function PrepareForNextRound(newDeal){
+      var url = "http://localhost:8080/?func=nextround&format=json";
+      fetch(url).then((response) => {
+        // for each response header, log an array with header name as key
+        console.log(...response.headers);
+        response.json().then((myJson) => {
+          handleNextRound(myJson);
+        });
+      });    
+    }
+
+    function handleNextRound(data){
+      //TBD
+      let name = document.getElementById("fname");
+      let next = data.next;
+      let newdeal = data.cardsleft == "no";
+
+      //removePlayedCards();
+
+      if (newdeal == true) {
+        updatePointsField(data, true);
+      }
+      else {
+        removePlayedCards();
+        updatePointsField(data, false);
+      }
+
+      if (name == next){
+        getCardsFor(name);
+      }
+      SetShowPlayerOption(next);
+      handleActualPlayer(next, "play");
+    }
+
+    function updatePointsField(data, bpoints){
+      //TBD
+      pointfield = document.getElementById("my-point-field");
+
+      let points = document.getElementsByClassName("playerPointFieldDiv");
+      for (let i = points.length; i > 0 ; i--) {
+        let div = document.getElementById("div-player-point-field-" + i.toString());
+        div.remove();
+      }
+      let tmpDivinfo = document.getElementById("div-point-field-info");
+      if (tmpDivinfo == null) {
+        let divinfo = document.createElement("div");
+        divinfo.id = "div-point-field-info"
+        divinfo.innerHTML = "<p>" + "Result of game:" + "</p>";
+        pointfield.appendChild(divinfo);
+      }
+
+      let i = 0;
+      for (const player of data.players) {
+        i = i + 1;
+        let div = document.createElement("div");
+        div.className = "playerPointFieldDiv";
+        div.id = "div-player-point-field-" + i.toString();      
+        if (bpoints) {
+          div.innerHTML = "<p>" + player.name + ": " + player.points + " points</p>";
+        }
+        else {
+          div.innerHTML = "<p>" + player.name + ": " + player.sticks + " (" + player.bid + ")</p>";
+        }
+        pointfield.appendChild(div);
+      };
+    }
+
+    function dealcards(){
+      var url = "http://localhost:8080/?func=deal&format=json";
+      fetch(url).then((response) => {
+        // for each response header, log an array with header name as key
+        console.log(...response.headers);
+        response.json().then((myJson) => {
+          //const objectURL = URL.createObjectURL(myBlob);        
+          handleDealCard(myJson);
+          //myImage.innerHTML = "<p>" + myJson + "</p>";
+        });
+      });    
+    }
+
+    function handleDealCard(data){
+      //TBD
+    }
+
+    function startGame(){
+      var url = "http://localhost:8080/?func=start&format=json";
+      fetch(url).then((response) => {
+        // for each response header, log an array with header name as key
+        console.log(...response.headers);
+        response.json().then((myJson) => {
+          //const objectURL = URL.createObjectURL(myBlob);        
+          var name = handleActualPlayer(myJson.next, "bid");
+          if (name == fname.value){
+            getCardsFor(name);
+          }
+          //myText = document.getElementById("fname");
+          //myText.value = name;
+          SetShowPlayerOption(name);
+          if (myJson.playersorder[0].virtual === "true"){
+            let name = myJson.playersorder[0].name;
+            setBidSticks(name, "0", "true");
+          }
+
+        });
+      });    
+    }
+
+    function handleActualPlayer(name, play){
+      //id="next_to_play"
+      nextToPlay = document.getElementById("next_to_play");
+      nextToPlay.innerHTML = "<p>Next to " + play + ": " + name + "</p>";
+      return name;
+    }
+
+    function test(){
+      var url = "http://localhost:8080/?func=test";
+      fetch(url).then((response) => {
+        // for each response header, log an array with header name as key
+        console.log(...response.headers);
+        response.json().then((myJson) => {
+        });
+      });
+    }
+
+    function GetCardPlayerName(){
+      var url = "http://localhost:8080/?func=actualplayer";
+      fetch(url).then((response) => {
+        // for each response header, log an array with header name as key
+        console.log(...response.headers);
+        response.json().then((myJson) => {
+          let cardplayername  = myJson.player;
+          if (cardplayername == fname.value) {
+            if (nIntervId != null) {
+                clearInterval(nIntervId);
+                nIntervId = null;
+            } 
+            GetActualGameInfo();
+          }
+        });
+      });
+    }
+
+    function GetActualGameInfo(){
+      var url = "http://localhost:8080/?func=actualgameinfo&format=json";
+      fetch(url).then((response) => {
+        // for each response header, log an array with header name as key
+        console.log(...response.headers);
+        response.json().then((myJson) => {
+          let myText = document.getElementById("fname");
+          let name = myText.value;
+          let player = myJson.player;
+          handleActualPlayer(player, "play");
+          // myText = document.getElementById("fname");
+          // myText.value = name;
+          showPlayers(myJson.players);
+          SetShowPlayerOption(player);
+
+          if (myJson.firstcard !== "true") {
+            let tmpSuitDiv = document.getElementById("played-suit");
+            tmpSuitDiv.innerHTML = "<p>Actual suit: " + myJson.playingsuit + "</p>";
+          }
+          updatePlayedCards(myJson.playedcards);
+          if (myJson.cardsleft === "no"){
+            updatePointsField(myJson, true);  
+          }
+          else {
+            updatePointsField(myJson, false);
+          }
+
+          getCardsFor(name);
+
+        });
+      });    
+    }
+
+    function removePlayedCards(){
+      //played-card-img remove
+      //let playedCardImgs = document.getElementsByClassName("played-card-img");
+      //for (let i=playedCardImgs.length - 1; i >= 0; i--) {
+      //  playedCardImgs[i].remove();
+      //} 
+      let playedCardDivs = document.getElementsByClassName("played-card-div");
+      for (let i=playedCardDivs.length - 1; i >= 0; i--) {
+        playedCardDivs[i].remove();
+      } 
+      //let masterPlayedCardDivs = document.getElementsByClassName("master-played-card-div");
+      //for (let i=masterPlayedCardDivs.length - 1; i >= 0; i--) {
+      //  masterPlayedCardDivs[i].remove();
+      //} 
+      for (let i = 1; i <= 6; i++){
+        document.getElementById("PlayedCard" + i.toString()).src = "Images/backside.jpg";
+      }
+    }
+
+    function updatePlayedCards(playedcards){
+      removePlayedCards();
+
+      let cardPlayed = document.getElementById("my-played-card");
+
+      //let first = true;
+      //let wWidth = 100;
+      //let wWidthBase = wWidth;
+      //let lLength = playedcards.length;
+      // if (lLength > 0) {
+      //   wWidth = (100/(lLength + 1)).toFixed(0);
+      // }
+      let i = 0;
+      for (card of playedcards) {
+        //let myMasterDiv = document.createElement("div");
+        //myMasterDiv.className = "master-played-card-div";
+
+        //if (first) {
+        //  first = false;
+        //  myMasterDiv.style = "width: " + wWidth.toString() + "px;"
+        //  myMasterDiv.float = "left;" 
+        //  myMasterDiv.background = "green;";
+        //}
+        //else {
+        //  let wToLeft = wWidth + wWidthBase;
+        //  myMasterDiv.style="margin-left: " + wToLeft.toString() + "px;"
+        //  wWidth = wWidth + wWidthBase;
+        //  myMasterDiv.background = "blue;";
+        //}
+        //myMasterDiv.height = "100px;"        
+
+        ////Image
+        //let img = document.createElement("img");
+        //img.className = "played-card-img";
+        //img.setAttribute("width", "67");
+        //img.setAttribute("height", "84");
+        //img.src = "Images/" + card.suit  + "_" + card.rank + ".jpg";
+        //myMasterDiv.appendChild(img);
+        //name
+        i++;
+        document.getElementById("PlayedCard" + i.toString()).src = "Images/" + card.suit  + "_" + card.rank + ".jpg";
+
+
+        let myPlayedCardDiv = document.createElement("div");
+        myPlayedCardDiv.className = "played-card-div";
+        myPlayedCardDiv.innerHTML = "<p>" + card.suit + " (" + card.rank + ")</p>";
+        //myMasterDiv.appendChild(myPlayedCardDiv);
+        //cardPlayed.appendChild(myMasterDiv);
+        cardPlayed.appendChild(myPlayedCardDiv);
+      }
+    }
+
+  
+</script>
+<p><button type="button" onclick="renderUsers()">show players</button></p><br>
+<!-- <input id="players" type="file" onchange="previewPlayersFile(this)" /><br /> -->
+<!-- <a href="http://localhost:8080/?name=sluggo&func=getplayers" target="_blank">Get players</a><br> -->
+<!-- <a href="http://localhost:8080/?func=deal" target="_blank">Deal cards</a><br> -->
+<button type="button" onclick="dealcards()">Deal cards</button>
+<button type="button" onclick="startGame()">Start</button><br>
+<button type="button" onclick="getCards()">Get cards</button><br>
+<input type="text" id="fbid" name="fbid" value="0">
+<button type="button" onclick="bidSticks(fbid.value)">Bid sticks</button>
+<div id="next_to_play"></div>
+<p class="content"></p>
+
+<div class="container" id="cards-container"></div><br>
+<img id="Card1" src="Images/joker.jpg" alt="Card1" width="64" height="87" ondblclick="cardclick(this)">
+<img id="Card2" src="Images/joker.jpg" alt="Card2" width="64" height="87" ondblclick="cardclick(this)">
+<img id="Card3" src="Images/joker.jpg" alt="Card3" width="64" height="87" ondblclick="cardclick(this)">
+<img id="Card4" src="Images/joker.jpg" alt="Card4" width="64" height="87" ondblclick="cardclick(this)">
+<img id="Card5" src="Images/joker.jpg" alt="Card5" width="64" height="87" ondblclick="cardclick(this)">
+<img id="Card6" src="Images/joker.jpg" alt="Card6" width="64" height="87" ondblclick="cardclick(this)">
+<img id="Card7" src="Images/joker.jpg" alt="Card7" width="64" height="87" ondblclick="cardclick(this)">
+<img id="Card8" src="Images/joker.jpg" alt="Card8" width="64" height="87" ondblclick="cardclick(this)">
+<img id="Card9" src="Images/joker.jpg" alt="Card9" width="64" height="87" ondblclick="cardclick(this)">
+<img id="Card10" src="Images/joker.jpg" alt="Card10" width="64" height="87" ondblclick="cardclick(this)">
+<!-- <img id="Card1" src="Images/joker.jpg" alt="Card1" width="64" height="87">
+<img id="Card2" src="Images/joker.jpg" alt="Card2" width="64" height="87">
+<img id="Card3" src="Images/joker.jpg" alt="Card3" width="64" height="87">
+<img id="Card4" src="Images/joker.jpg" alt="Card4" width="64" height="87">
+<img id="Card5" src="Images/joker.jpg" alt="Card5" width="64" height="87">
+<img id="Card6" src="Images/joker.jpg" alt="Card6" width="64" height="87">
+<img id="Card7" src="Images/joker.jpg" alt="Card7" width="64" height="87">
+<img id="Card8" src="Images/joker.jpg" alt="Card8" width="64" height="87">
+<img id="Card9" src="Images/joker.jpg" alt="Card9" width="64" height="87">
+<img id="Card10" src="Images/joker.jpg" alt="Card10" width="64" height="87"> -->
+<br>
+<!-- <input id="cards" type="file" onchange="previewCardsFile(this)" /><br /> -->
+
+<p><button type="button" onclick="PlayCard()">Play card</button>  <button type="button" onclick="PlayCardVirtual()">Play Virtual</button></p><br>
+<div style="width: 100%;" class="container" id="my-played-card"></div><br>
+<img id="PlayedCard1" src="Images/backside.jpg" alt="PlayedCard1" width="64" height="87">
+<img id="PlayedCard2" src="Images/backside.jpg" alt="PlayedCard2" width="64" height="87">
+<img id="PlayedCard3" src="Images/backside.jpg" alt="PlayedCard3" width="64" height="87">
+<img id="PlayedCard4" src="Images/backside.jpg" alt="PlayedCard4" width="64" height="87">
+<img id="PlayedCard5" src="Images/backside.jpg" alt="PlayedCard5" width="64" height="87">
+<img id="PlayedCard6" src="Images/backside.jpg" alt="PlayedCard6" width="64" height="87">
+<div class="container" id="played-suit"></div><br>
+<div class="container" id="the-winner-is"></div><br>
+<p><button type="button" onclick="GetActualGameInfo()">Actual game info</button>  <button type="button" onclick="GetCardPlayerName()">card player</button></p><br>
+<div class="pointfield" id="my-point-field"></div><br>
+<p><button type="button" onclick="window.location.href='http://localhost:8080/?func=test';" target="_blank">TEST</button>  <button type="button" onclick="test()">TEST call via script</button></p><br>
+
+</body>
+</html>

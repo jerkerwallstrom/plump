@@ -1,0 +1,1 @@
+{"players": [{"name": "john", "pos": 0, "points": 0, "winner": false}, {"name": "stina", "pos": 1, "points": 0, "winner": false}, {"name": "pelle", "pos": 2, "points": 0, "winner": false}, {"name": "lisa", "pos": 3, "points": 0, "winner": false}]}

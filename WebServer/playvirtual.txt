@@ -1,0 +1,1 @@
+{"player": "pirlo", "card": "spade(10)", "result": "true", "next": "jerka", "nextvirtual": "false", "roundfinish": "false", "playingsuit": "diamond", "firstcard": "false"}

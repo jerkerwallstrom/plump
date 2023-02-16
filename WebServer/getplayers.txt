@@ -1,0 +1,1 @@
+{"players": [{"name": "jerka", "pos": 0, "points": 0, "winner": false, "bid": 0, "sticks": 0, "virtual": "false"}, {"name": "virre", "pos": 1, "points": 0, "winner": false, "bid": 0, "sticks": 0, "virtual": "true"}, {"name": "pirlo", "pos": 2, "points": 0, "winner": false, "bid": 0, "sticks": 0, "virtual": "true"}]}

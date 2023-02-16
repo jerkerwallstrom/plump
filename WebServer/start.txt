@@ -1,0 +1,1 @@
+{"result": "true", "next": "jerka", "playersorder": [{"name": "jerka", "virtual": "false"}, {"name": "virre", "virtual": "true"}, {"name": "pirlo", "virtual": "true"}]}
