@@ -79,6 +79,14 @@ class PlayerAnalyze:
       if rankint > 10:
         royals += 1
     return royals    
+  
+  def countCardsInterval(self, incards, minV, maxV):
+    outcards = 0
+    for card in incards:
+      rankint = carddeck.getRankInt(card["rank"])
+      if rankint >= minV and rankint <= maxV:
+        outcards += 1
+    return outcards    
       
   def analyzeDataFromAverageAndRoyalcards(self, cardcount, average, royalCards, longsuite):
     sticks = 0
@@ -101,6 +109,37 @@ class PlayerAnalyze:
                 longsuitessticks = longsuitessticks + tmpsticks
             # if jsondata["longsuite"] == "true":
             #   averagecntr = longsuitetrue + 1
+    self.hit = averagecntr > 0
+    self.longsuite = longsuitecntr  > 0
+
+    self.lsSticks = 0
+    if longsuitecntr > 0:
+      self.lsSticks = round(longsuitessticks / longsuitecntr)
+
+    if averagecntr > 0: 
+      sticks = round(stickssum / averagecntr)
+    
+    return sticks
+
+  def analyzeDataFromCountingCards(self, cardcount, royalCards, middleCards, lowCards, longsuite):
+    sticks = 0
+    averagecntr = 0
+    longsuitecntr = 0
+    stickssum = 0
+    longsuitessticks = 0
+
+    for jsondata in self.jsonobjects:
+      if jsondata["cardcount"] == cardcount:
+        tmpRoyalCards = self.countRoyalCards(jsondata["cards"])
+        tmpmiddleCards = self.countCardsInterval(jsondata["cards"], 7, 10)
+        tmplowCards = self.countCardsInterval(jsondata["cards"], 2, 6)
+        if tmpRoyalCards == royalCards and tmpmiddleCards == middleCards and tmplowCards == lowCards:
+          tmpsticks = jsondata["sticks"]
+          averagecntr = averagecntr + 1
+          stickssum = stickssum + tmpsticks
+          if jsondata["longsuite"] == "true":
+            longsuitecntr += 1
+            longsuitessticks = longsuitessticks + tmpsticks
     self.hit = averagecntr > 0
     self.longsuite = longsuitecntr  > 0
 

@@ -84,14 +84,20 @@ class Player:
 
     #count royal cards
     royalcards = 0
+    middlecards = 0
+    lowcards = 0
     for card in cards:
       if card.rankNr > 10:
         royalcards = royalcards + 1
+      elif card.rankNr >= 7:  
+        middlecards = middlecards + 1
+      else:
+        lowcards = lowcards + 1  
 
     playerAnalyze = playeranalyze.PlayerAnalyze()
     iData = playerAnalyze.readfile("AIdata.txt")
     if iData > 0:
-      bidSuggest = playerAnalyze.analyzeDataFromAverageAndRoyalcards(len(cards), self.rankAverage, royalcards, self.longsuite)
+      bidSuggest = playerAnalyze.analyzeDataFromCountingCards(len(cards), royalcards, middlecards, lowcards, self.longsuite)
       if playerAnalyze.hit:
         value = bidSuggest
         if self.longsuite and playerAnalyze.longsuite:
