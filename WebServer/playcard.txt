@@ -1,1 +1,1 @@
-{"player": "jerka", "card": "heart(2)", "result": "true", "roundfinish": "true", "playingsuit": "diamond", "firstcard": "false", "winner": "virre", "cardsleft": "no", "players": [{"name": "virre", "bid": 2, "sticks": 3, "points": 0, "winner": true}, {"name": "pirlo", "bid": 2, "sticks": 3, "points": 0, "winner": false}, {"name": "jerka", "bid": 2, "sticks": 2, "points": 20, "winner": false}]}
+{"player": "jerka", "card": "diamond(9)", "result": "true", "next": "virre", "nextvirtual": "true", "roundfinish": "false", "playingsuit": "diamond", "firstcard": "false"}
