@@ -1,1 +1,1 @@
-{"player": "jerka", "cards": [{"suit": "heart", "rank": "2"}]}
+{"player": "jerka", "cards": [{"suit": "diamond", "rank": "9"}]}

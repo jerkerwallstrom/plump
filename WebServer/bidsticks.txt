@@ -1,1 +1,1 @@
-{"player": "pirlo", "bid": "2", "result": "true", "next": "", "virtual": "true", "last": "false", "playcard": "true", "nextplaycard": "jerka"}
+{"player": "virre", "bid": "1", "result": "true", "next": "", "virtual": "true", "last": "false", "playcard": "true", "nextplaycard": "jerka"}

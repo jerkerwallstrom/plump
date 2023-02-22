@@ -24,6 +24,8 @@ class Player:
     self.tmpCards = []
     self.offensive = False
     self.longsuitelen = 0
+    self.virtualPlayingCards = []
+    self.round = -1
 
   def __str__(self):
     return f"{self.name}({str(self.pos)})"
@@ -32,6 +34,7 @@ class Player:
     return self.pos
   
   def SetBidSticks(self, value):
+    self.round = -1
     try: 
       if self.lastbid and (int(value) == self.notbid):
         return False 
@@ -74,6 +77,7 @@ class Player:
     return longSuiteLen    
 
   def SetVirtualBidSticks(self, playorder):
+    self.round = -1
     value = 0
     cards = self.GetCards()
     if len(cards) <= 0:
@@ -83,21 +87,25 @@ class Player:
     self.longsuite = self.longsuitelen > 0
 
     #count royal cards
+    strongroyalcards = 0
     royalcards = 0
     middlecards = 0
     lowcards = 0
     for card in cards:
-      if card.rankNr > 10:
-        royalcards = royalcards + 1
+
+      if card.rankNr > 12:
+        strongroyalcards += 1
+      elif card.rankNr > 10:  
+        royalcards += 1
       elif card.rankNr >= 7:  
-        middlecards = middlecards + 1
+        middlecards += 1
       else:
-        lowcards = lowcards + 1  
+        lowcards += 1  
 
     playerAnalyze = playeranalyze.PlayerAnalyze()
     iData = playerAnalyze.readfile("AIdata.txt")
     if iData > 0:
-      bidSuggest = playerAnalyze.analyzeDataFromCountingCards(len(cards), royalcards, middlecards, lowcards, self.longsuite)
+      bidSuggest = playerAnalyze.analyzeDataFromCountingCards(len(cards), strongroyalcards, royalcards, middlecards, lowcards, self.longsuite)
       if playerAnalyze.hit:
         value = bidSuggest
         if self.longsuite and playerAnalyze.longsuite:
@@ -105,9 +113,11 @@ class Player:
           if lsValue > value:
             value = lsValue
       else:
-        value = royalcards  
+        value = strongroyalcards + round(royalcards / 2) + round(middlecards / 4)  
     else:
-      value = royalcards
+      value = strongroyalcards + round(royalcards / 2) + round(middlecards / 4)
+
+    self.virtualPlayingCards = playerAnalyze.GetPlayingCards()  
 
     if len(cards) == 1:
       if playorder == 0:
@@ -132,7 +142,7 @@ class Player:
           value = value - 1  
 
     self.bid = value
-    self.offensive = self.bid >= 2 #(len(self.cards) / 2)
+    self.offensive = (len(cards) < 5) or (self.bid >= 2) #(len(self.cards) / 2)
     return value
     
   def isGiven(self):
@@ -155,9 +165,11 @@ class Player:
       else:
         self.points = self.points + 5
   
-
+  def sortCards(self):
+    self.cards.sort(key=lambda x: (x.suitNr, x.rankNr), reverse=True)
+  
   def addcard(self, card):  
-    self.cards.append(card);
+    self.cards.append(card)
   
   def cardsleft(self):
     return len(self.cards)  
@@ -246,11 +258,37 @@ class Player:
     except:         
       return iRtn
 
+  def findclosestCard(self, fsuit, fRankInt, aRnkNr):
+    suitCards = []
+    tmpCard = None
+    for card in self.cards:
+      if fsuit == None or card.suit == fsuit:
+        suitCards.append(card)
+        if card.rankNr == aRnkNr:
+          tmpCard = card      
+    if tmpCard == None:
+      #find closest
+      distance = 15
+      for card in suitCards:
+        if abs(card.rankNr - aRnkNr) < distance:
+          distance = abs(card.rankNr - aRnkNr)
+          tmpCard = card
+    return tmpCard      
+
   def getAutomaticPlaycard(self, fsuit, fRankInt):
     #szTest = "Test Rank (Int): {}" 
     #print(szTest.format(fRankInt))
-    szCard = None
+    self.round += 1
+
+    rtnCard = None
+
     if len(self.cards) > 0:
+      tmpCard = None
+      aRnkNr = playeranalyze.analyzePlayingCards(self.virtualPlayingCards, self.round)
+      if aRnkNr > 0:
+        tmpCard = self.findclosestCard(fsuit, fRankInt, aRnkNr)
+      if tmpCard != None:
+        return tmpCard
       #first = True
       tmpCard = self.cards[0]
 
@@ -277,22 +315,32 @@ class Player:
             
         bFound = False    
         if self.sticks != self.bid:
+          playMiddleCard = False
           for card in suitCards:
             if card.rankint() > fRankInt:
               bFound = True
               if self.offensive or (self.bid-self.sticks == 1):
                 if card.rankint() > tmpCard.rankint():
                   tmpCard = card
-              else:  
+              else:
+                playMiddleCard = True
                 if card.rankint() < tmpCard.rankint():
                   tmpCard = card
+
+          if playMiddleCard:
+            tmpCard = self.findMiddleCard(suitCards, None)
+
         if not bFound:
           #Find lowest
-          tmpI = 15
-          for card in suitCards:
-            if card.rankint() < tmpI:
-              tmpCard = card
-              tmpI = card.rankint()
+
+          try:
+            tmpCard = self.findMiddleCard(suitCards, None)
+          except:  
+            tmpI = 15
+            for card in suitCards:
+              if card.rankint() < tmpI:
+                tmpCard = card
+                tmpI = card.rankint()
           
       else:      
         if self.sticks < self.bid:
@@ -324,11 +372,37 @@ class Player:
               if (tmpCard == None):
                 tmpCard = suitCards[0]
       
-      szCard = tmpCard
+      rtnCard = tmpCard
       #self.cards.remove(tmpCard)
             
     #self.playedCard = szCard;        
-    return szCard
+    return rtnCard
+  
+  def findMiddleCard(self, cards, suit):
+    #sort
+    tmpCards = []
+    for card in cards:
+      if suit == None or suit == card.suit:
+        tmpCards.append(card)
+    lowCard = None
+    cardsleft = True
+    sortCards = []
+    while cardsleft:
+      low = 15
+      for card in tmpCards:
+        if card.rankNr < low:
+          lowCard = card
+          low = lowCard.rankNr
+      sortCards.append(lowCard)
+      tmpCards.remove(lowCard)
+      cardsleft = len(tmpCards) > 0
+
+    ilen = len(sortCards)  
+    imiddle = round((ilen + 0.1) / 2) - 1
+    thecard = sortCards[imiddle]
+    return thecard
+
+
   
   def GetCards(self):
     retCards = []
@@ -366,6 +440,7 @@ class Player:
   def summerygame(self):
     rtns = dict()
     #name of player
+    rtns["game"] = "plump"
     rtns["player"] = self.name
     #cards to json
     rtns["cardcount"] = len(self.tmpCards)

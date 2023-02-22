@@ -17,7 +17,9 @@ class Game:
     self.cardPlayerName = ""
     self.tokenName = ""
     self.cardDeck = carddeck.CardDeck()
-    self.nrofcards = 9 #Start with one more than in the first round
+    self.maxnrofcards = 10
+    self.nrofcards = 11 #Start with one more than in the first round
+    self.countDown = True
     self.webparser = webparser.webParser()
     self.format = "text"
     self.jSonV = json.dumps("text")
@@ -30,7 +32,6 @@ class Game:
     self.playedcards = []
     self.nextPlayer = None
     self.bestcard = None
-    self.maxnrofcards = 10
     self.round = 0
     self.logplayedcards = dict()
 
@@ -122,13 +123,16 @@ class Game:
     return szRtn  
   
   def setBidSticks(self, query):
-    rtns = dict()
-    res = False
-    virtual = False
     self.format = self.webparser.parseCmd("format", query)
     name = self.webparser.parseCmd("name", query)
     value = self.webparser.parseCmd("value", query)
     virtual = self.webparser.parseCmd("virtual", query) == "true"
+    res = self.setBidSticksForPlayer(name, value, virtual)
+    return res
+
+  def setBidSticksForPlayer(self, name, value, virtual):
+    rtns = dict()
+    res = False
     #Set value for user in query
     ipcnt = 0
     for p in self.playersOrder:
@@ -382,6 +386,7 @@ class Game:
       f.close()
     f = open("AIdata.txt", "a")
     rounds = len(self.logplayedcards)
+    self.logplayedcards["game"] = "plump"
     self.logplayedcards["rounds"] = rounds
     szplayedcards = json.dumps(self.logplayedcards)
     f.write(szplayedcards + "\n")
@@ -534,8 +539,18 @@ class Game:
     """
     return szRtn    
 
+  def setNumberOfCards(self):
+    if self.countDown: 
+      self.nrofcards = self.nrofcards - 1
+    else:
+      self.nrofcards = self.nrofcards + 1
+    if self.nrofcards <= 1:
+      self.countDown = False
+    if self.nrofcards >= self.maxnrofcards:
+      self.countDown = True  
+
   def deal(self, query):
-    self.nrofcards = self.nrofcards - 1
+    self.setNumberOfCards()
     szRtn = ""
     self.format = self.webparser.parseCmd("format", query)
     #"idle", "playeradd", "deal", "start", "end"
@@ -561,15 +576,17 @@ class Game:
       players["nrofcards"] = str(self.nrofcards)
       self.jSonV = json.dumps(players)
       szRtn = str(self.jSonV)
-      self.gamestatus = "deal"
-
+  
     return szRtn
 
   def start(self, query):
+    self.format = self.webparser.parseCmd("format", query)
+    res = self.startTheGame()
+    return res
+
+  def startTheGame(self):
     self.round = 0
     self.gamestatus = "start"
-    self.format = self.webparser.parseCmd("format", query)
-
     self.playersOrder = []
     self.playersOrder = self.getPlayersOrderWithToken(self.players, self.tokenName)
     self.tokenName = self.setNextToken(self.players, self.tokenName)
@@ -766,7 +783,12 @@ class Game:
         if self.cardDeck.cardleft:
           p.addcard(self.cardDeck.getcard())
       n += 1
-    
+
+    for p in self.players:
+      p.sortCards()  
+
+    self.gamestatus = "deal"
+
 
   
 
