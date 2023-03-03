@@ -12,6 +12,7 @@
 <input type="text" id="fname" name="fname" value="jerka"><br>
 <!-- <button type="button" onclick="window.location.href='http://localhost:8080/?name=' + fname.value + '&func=addplayer';" target="_blank">TEST Add</button><br> -->
 <button type="button" onclick="AddUser(fname.value)">Add Player</button>  <button type="button" onclick="AddVirtualUser(fname.value)">Add Virtual Player</button><br>
+<button type="button" onclick="AddTestUsers()">Add test players</button>
 <div class="container" id="add-player-container"></div>
 <div class="container" id="players-container"></div>
 
@@ -59,6 +60,13 @@
 
     function AddVirtualUser(fname){
       AddUserToGame(fname, true)
+    }
+
+    function AddTestUsers()
+    {
+      AddUser("jerka");
+      AddVirtualUser("virre");
+      AddVirtualUser("pirlo");
     }
     
     function AddUserToGame(name, virtual)
