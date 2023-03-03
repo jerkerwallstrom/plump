@@ -24,3 +24,25 @@ res = game.setBidSticksForPlayer("virre", 0, True)
 print(res)
 res = game.setBidSticksForPlayer("pirlo", 0, True)
 print(res)
+#first played card
+next = game.nextPlayer.name
+res = game.playTheVirtualCardFor(next)
+next = game.nextPlayer.name
+res = game.playTheVirtualCardFor(next)
+next = game.nextPlayer.name
+res = game.playTheVirtualCardFor(next)
+
+res = game.getLatestStatusOfGame()
+#second played card
+if game.nextPlayer == None:
+  next = game.winner  
+else:
+  next = game.nextPlayer.name
+    
+res = game.playTheVirtualCardFor(next)
+next = game.nextPlayer.name
+res = game.playTheVirtualCardFor(next)
+next = game.nextPlayer.name
+res = game.playTheVirtualCardFor(next)
+
+print(res)

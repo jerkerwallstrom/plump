@@ -2,6 +2,7 @@
 import carddeck
 import json
 import playeranalyze
+import competitor
 
 class Player:
   def __init__(self, name, pos):
@@ -26,6 +27,7 @@ class Player:
     self.longsuitelen = 0
     self.virtualPlayingCards = []
     self.round = -1
+    self.competitors = []
 
   def __str__(self):
     return f"{self.name}({str(self.pos)})"
@@ -275,6 +277,29 @@ class Player:
           tmpCard = card
     return tmpCard      
 
+  def checkIfSuitAreOkay(self, suit):
+    suitOk = False
+    for c in self.competitors:
+      if c.name != self.name:
+        tmpSuitOk = c.haveCardInSuit(suit)
+        if tmpSuitOk == True:
+          suitOk = True
+    return suitOk
+
+  def checkIfSuitHaveBeenPlayed(self, suit):
+    suitHaveBeenPlayed = 0
+    for c in self.competitors:
+      if c.name == self.name:
+        suitHaveBeenPlayed = c.haveSuitBeenPlayed(suit)
+    return suitHaveBeenPlayed
+  
+  def getRecommendedSuit(self):
+    suitCnt = None
+    for c in self.competitors:
+      if c.name == self.name:
+        suitCnt = c.getRecommendedSuit()
+    return suitCnt
+      
   def getAutomaticPlaycard(self, fsuit, fRankInt):
     #szTest = "Test Rank (Int): {}" 
     #print(szTest.format(fRankInt))
@@ -299,6 +324,23 @@ class Player:
 
       if (self.offensive or (self.bid-self.sticks == 1)) and fsuit == None and self.sticks < self.bid:    
         #play strongest
+        if fsuit == None:
+          #Suggest suit to play
+          rtnV = self.getRecommendedSuit()
+          if rtnV != None and len(rtnV) > 0:
+            recSuit = list(rtnV.keys())[0]
+            suitCnt = rtnV[recSuit]
+            if suitCnt >= 2:
+              rtnCard = None
+              tmpI = 0
+              for card in suitCards:
+                if card.suit == recSuit and card.rankint() > tmpI:
+                  rtnCard = card
+                  tmpI = card.rankint()
+              if rtnCard != None:
+                return rtnCard    
+
+        #get strongest card!
         tmpI = 0
         for card in suitCards:
           if card.rankint() > tmpI:
@@ -350,10 +392,16 @@ class Player:
               tmpCard = card
         else:      
           #waste lowest card if you are first to play
+          #Get tmpcard in a valid suit
+          for card in self.cards:
+            tmpCard = card
+            if self.checkIfSuitAreOkay(tmpCard.suit) or self.checkIfSuitHaveBeenPlayed(tmpCard.suit) == 0:
+              break
           if fsuit == None:
             for card in self.cards:
               if card.rankint() < tmpCard.rankint():
-                tmpCard = card          
+                if self.checkIfSuitAreOkay(card.suit) or self.checkIfSuitHaveBeenPlayed(tmpCard.suit) == 0:
+                  tmpCard = card          
           else:
             if len(suitCards) <= 0:
               #waste highest card if wrong suit
@@ -436,6 +484,21 @@ class Player:
       tmpCard.update({"rank": card.rank})
       self.tmpCards.append(tmpCard)
 
+  def infoAboutPlayedCard(self, name, round, suit, card):
+    bExist = False
+    for c in self.competitors:
+      if c.name == name:
+        bExist = True
+        c.addCard(round, suit, card)
+        break
+
+    if not bExist:
+      c = competitor.Competitor(name)
+      c.addCard(round, suit, card)
+      self.competitors.append(c)  
+
+  def resetCompetitors(self):
+    self.competitors = []
 
   def summerygame(self):
     rtns = dict()

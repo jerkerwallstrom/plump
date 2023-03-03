@@ -231,10 +231,15 @@ class Game:
     return self.playersOrder
 
   def playVirtualCard(self, query):
-    szRtn = ""
-    rtns = dict();  
     self.format = self.webparser.parseCmd("format", query)
     name = self.webparser.parseCmd("name", query)
+    szRtn = self.playTheVirtualCardFor(name)
+    return szRtn
+
+  def playTheVirtualCardFor(self, name):
+    szRtn = ""
+    rtns = dict();  
+
     nameOk = name == self.nextPlayer.name
     #dummycheck
     if (self.nextPlayer == None) or (not nameOk):
@@ -285,6 +290,14 @@ class Game:
     szRes = self.thePlayerPlayCard(name, card)
     return szRes
 
+  def updateInfoToPlayers(self, round, name, suit, card):
+    for p in self.playersOrder:
+      p.infoAboutPlayedCard(name, round, suit, card)
+
+  def resetCompetitors(self):
+    for p in self.players:
+      p.resetCompetitors()    
+
   def thePlayerPlayCard(self, name, card):
     rtns = dict();  
     iRtn = self.playCardForPlayer(name, card)
@@ -300,8 +313,10 @@ class Game:
       self.playedcards.append(carddeck.Card(card.suit, card.rank))
       bestcard = self.getBestPlayedCard()
       self.bestcard = bestcard
-      next = self.setNextPlayer()
+      next = self.setNextPlayer() #if next is None then we set checkthewinner to true in this routine
       self.nextPlayer = next
+
+      self.updateInfoToPlayers(self.round, name, self.playingSuit, card)
 
       if next != None:
         rtns["next"] = next.name
@@ -320,6 +335,7 @@ class Game:
           self.setPoints()
           self.summerygame()
           self.gamestatus = "end"
+          self.resetCompetitors()
       if next == None:    
         tmpPlayers = []
         for p in self.playersOrder:
